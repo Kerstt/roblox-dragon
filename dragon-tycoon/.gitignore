@@ -1,0 +1,12 @@
+# Place files are large and contain the whole world; the place lives on Roblox.
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+*.lock
+
+# Editor / OS clutter
+.vscode/
+.DS_Store
+Thumbs.db
+sourcemap.json

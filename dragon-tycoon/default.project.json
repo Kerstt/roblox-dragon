@@ -1,0 +1,23 @@
+{
+  "name": "dragon-tycoon",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/ReplicatedStorage/Shared" },
+      "Client": { "$path": "src/ReplicatedStorage/Client" }
+    },
+    "ServerScriptService": {
+      "Main": { "$path": "src/ServerScriptService/Main.server.luau" }
+    },
+    "ServerStorage": {
+      "Modules": { "$path": "src/ServerStorage/Modules" },
+      "Tests": { "$path": "src/ServerStorage/Tests" },
+      "Tools": { "$path": "src/ServerStorage/Tools" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "ClientMain": { "$path": "src/StarterPlayer/StarterPlayerScripts/ClientMain.client.luau" }
+      }
+    }
+  }
+}
