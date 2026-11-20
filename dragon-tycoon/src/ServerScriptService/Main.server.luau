@@ -19,6 +19,7 @@ local CombatService = require(Modules.CombatService)
 local QueueService = require(Modules.QueueService)
 local ShopService = require(Modules.ShopService)
 local TutorialService = require(Modules.TutorialService)
+local DevBridge = require(Modules.DevBridge)
 
 -- 1. Saving must exist before anything touches player data.
 DataService.init()
@@ -36,6 +37,7 @@ CombatService.init() -- after RemoteService (adds Remotes/Combat) and MountServi
 QueueService.init()
 ShopService.init() -- registers Developer Products with PurchaseService
 TutorialService.init()
+DevBridge.init() -- Studio-only test hook; does nothing in live servers
 -- 3. Start loading players last, so every listener is connected first.
 DataService.start()
 

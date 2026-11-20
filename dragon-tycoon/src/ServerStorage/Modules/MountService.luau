@@ -145,10 +145,10 @@ local function summon(player: Player, dragonId: string, options: SummonOptions?)
 	seat.Massless = true
 	seat.CFrame = saddleAttachment.WorldCFrame
 	seat.Parent = model
-	-- Welded to the animated Body (not the Root), so the rider rises and falls
+	-- Welded to the animated Chest/Body (not the Root), so the rider rises and falls
 	-- with every wingbeat, breath and step.
 	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = model:FindFirstChild("Body") :: BasePart? or root
+	weld.Part0 = (model:FindFirstChild("Chest") or model:FindFirstChild("Body")) :: BasePart? or root
 	weld.Part1 = seat
 	weld.Parent = seat
 

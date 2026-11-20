@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage.Shared
 
 local Elements = require(Shared.Elements)
 local SkillCatalog = require(Shared.SkillCatalog)
+local DragonMotionController = require(script.Parent.DragonMotionController)
 
 local CombatFx = {}
 
@@ -177,10 +178,21 @@ end
 local function breath(caster: Model, casterRoot: BasePart, color: Color3, skill: any)
 	local length = caster:GetAttribute("Length") or 36
 	local foot = caster:GetAttribute("FootOffset") or 6
+	local duration = skill.Duration or 1.2
 	local attachment = Instance.new("Attachment")
 	attachment.Name = "BreathFx"
 	attachment.Position = Vector3.new(0, foot * 0.5, -length * 0.42)
 	attachment.Parent = casterRoot
+	-- Western dragons: breathe from the mouth itself (it moves with the head),
+	-- after the charge-up of the Breath action.
+	local delayStart = 0
+	local mouth = caster:FindFirstChild("Mouth_VFX", true) or caster:FindFirstChild("MouthAttachment", true)
+	if mouth and mouth:IsA("Attachment") and mouth.Parent and mouth.Parent:IsA("BasePart") then
+		attachment.Parent = mouth.Parent
+		attachment.CFrame = mouth.CFrame
+		DragonMotionController.PlayAction(caster, "Breath", { Duration = duration })
+		delayStart = 0.58
+	end
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Texture = if skill.Id:find("Frost") or skill.Id:find("Sun") or skill.Id:find("Solar") then SPARKLE else FIRE
 	emitter.EmissionDirection = Enum.NormalId.Front
@@ -192,17 +204,25 @@ local function breath(caster: Model, casterRoot: BasePart, color: Color3, skill:
 	emitter.Speed = NumberRange.new((skill.Range or 55) * 1.2, (skill.Range or 55) * 1.5)
 	emitter.SpreadAngle = Vector2.new(skill.Cone * 0.45, skill.Cone * 0.45)
 	emitter.Rate = if skill.Ultimate then 220 else 140
+	emitter.Enabled = delayStart == 0
 	emitter.Parent = attachment
 	local light = Instance.new("PointLight")
 	light.Color = color
 	light.Range = 30
 	light.Brightness = 3
+	light.Enabled = delayStart == 0
 	light.Parent = attachment
-	task.delay(skill.Duration or 1.2, function()
+	if delayStart > 0 then
+		task.delay(delayStart, function()
+			emitter.Enabled = true
+			light.Enabled = true
+		end)
+	end
+	task.delay(delayStart + duration, function()
 		emitter.Enabled = false
 		light.Enabled = false
 	end)
-	Debris:AddItem(attachment, (skill.Duration or 1.2) + 1)
+	Debris:AddItem(attachment, delayStart + duration + 1)
 end
 
 local function slash(target: Model, color: Color3, big: boolean)
@@ -339,6 +359,12 @@ function CombatFx.Play(kind: string, payload: any)
 		end
 		local color = colorOf(payload.Element)
 		local big = payload.Ultimate == true
+		-- The caster acts it out (breath plays its own action inside breath()).
+		if skill.Kind == "Strike" then
+			DragonMotionController.PlayAction(caster, "TailWhip")
+		elseif skill.Kind == "Nova" or (big and skill.Kind ~= "Breath") then
+			DragonMotionController.PlayAction(caster, "Roar")
+		end
 		if big then
 			floatText(caster, skill.Name .. "!", Color3.fromRGB(255, 215, 120), 1.2)
 			burst(casterRoot.Position, color, 40, 0.5)
