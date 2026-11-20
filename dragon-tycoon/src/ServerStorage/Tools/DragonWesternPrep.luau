@@ -38,9 +38,19 @@ local function meshParts(model: Instance): { MeshPart }
 	return list
 end
 
+-- A MeshPart's mesh data: from its uploaded asset, or the in-memory mesh of a
+-- piece made by DragonMeshSplitter (not owned here, so it is not destroyed).
+local function readMesh(part: MeshPart): (any, boolean)
+	local content = part.MeshContent
+	if content.SourceType == Enum.ContentSourceType.Object and content.Object then
+		return content.Object, false
+	end
+	return AssetService:CreateEditableMeshAsync(Content.fromUri(part.MeshId)), true
+end
+
 -- World-space vertices of a MeshPart (every `step`-th vertex).
 local function worldVertices(part: MeshPart, step: number?): { Vector3 }
-	local em = AssetService:CreateEditableMeshAsync(Content.fromUri(part.MeshId))
+	local em, owned = readMesh(part)
 	local scale = part.Size / part.MeshSize
 	local out = {}
 	local i = 0
@@ -50,7 +60,9 @@ local function worldVertices(part: MeshPart, step: number?): { Vector3 }
 			table.insert(out, part.CFrame:PointToWorldSpace(em:GetPosition(v) * scale))
 		end
 	end
-	em:Destroy()
+	if owned then
+		em:Destroy()
+	end
 	return out
 end
 

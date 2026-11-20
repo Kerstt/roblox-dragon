@@ -527,8 +527,10 @@ local function surfaceTop(part: BasePart, at: Vector3, radius: number): number
 		if not part:IsA("MeshPart") then
 			error("not a mesh")
 		end
-		local em = AssetService:CreateEditableMeshAsync(Content.fromUri(part.MeshId))
-		local scale = part.Size / part.MeshSize
+		local content = (part :: MeshPart).MeshContent
+		local inMemory = content.SourceType == Enum.ContentSourceType.Object and content.Object ~= nil
+		local em = if inMemory then content.Object :: any else AssetService:CreateEditableMeshAsync(Content.fromUri((part :: MeshPart).MeshId))
+		local scale = part.Size / (part :: MeshPart).MeshSize
 		local best = -math.huge
 		for _, v in em:GetVertices() do
 			local w = part.CFrame:PointToWorldSpace(em:GetPosition(v) * scale)
@@ -536,7 +538,9 @@ local function surfaceTop(part: BasePart, at: Vector3, radius: number): number
 				best = math.max(best, w.Y)
 			end
 		end
-		em:Destroy()
+		if not inMemory then
+			em:Destroy()
+		end
 		if best == -math.huge then
 			error("no vertices near the spot")
 		end
