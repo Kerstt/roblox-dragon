@@ -1,7 +1,6 @@
 -- ReplicatedStorage/Client/DragonsSheet
--- Your dragons: who's working where, assign/rest/release, auto-release settings.
--- Open(station) starts in "assign to this station" mode.
--- Each dragon shows its level and XP; Train opens Feed (coins) and Infuse (essence).
+-- Viking Dragon Roster: assign/rest/release, auto-release settings, and Train
+-- (Feed coins / Infuse essence). Open(station) enters station-assignment mode.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -20,11 +19,11 @@ local SkillCatalog = require(Shared.SkillCatalog)
 local DragonsSheet = {}
 
 local sheet: UI.Sheet
-local assignTo: string? = nil -- station chosen from the Stations sheet
-local rideMode = false -- "pick a dragon to ride"
-local expanded: string? = nil -- dragon id whose station picker is open
+local assignTo: string? = nil
+local rideMode = false
+local expanded: string? = nil
 local confirmRelease: string? = nil
-local trainOpen: string? = nil -- dragon id whose Train panel is open
+local trainOpen: string? = nil
 local busy = false
 
 local function act(action: string, ...: any)
@@ -61,7 +60,7 @@ local function sortedIds(state: any): { string }
 	end
 	table.sort(ids, function(a, b)
 		local da, db = state.Dragons[a], state.Dragons[b]
-		if assignTo then -- idle dragons that match the station first
+		if assignTo then
 			local ma = if not da.Station then incomeAt(state, da, assignTo) else -1
 			local mb = if not db.Station then incomeAt(state, db, assignTo) else -1
 			if ma ~= mb then
@@ -92,6 +91,7 @@ local function dragonRow(state: any, id: string, order: number)
 	local element = Elements.Info[species.Element]
 
 	local card = UI.card(sheet.Body, { LayoutOrder = order })
+	UI.stroke(card, if rarity.Rank >= 4 then rarity.Color else UI.Colors.Iron, if rarity.Rank >= 4 then 1.4 else 1)
 	UI.list(card, 6)
 	local top = UI.row(card, 44)
 	local bar = UI.new("Frame", { Size = UDim2.fromOffset(6, 40), BackgroundColor3 = rarity.Color, Parent = top })
@@ -103,7 +103,7 @@ local function dragonRow(state: any, id: string, order: number)
 	local where = if d.Station
 		then string.format("Working at %s • %s/s", d.Station, Format.Short(incomeAt(state, d, d.Station)))
 		else "Resting in the nest"
-	UI.label(info, string.format("<font color=\"#%s\">%s</font> • x%s egg power • %s", element.Color:ToHex(), element.DisplayName, Format.Short(d.Power or 1), where), 13, {
+	UI.label(info, string.format("<font color=\"#%s\">%s</font> • x%s power • %s", element.Color:ToHex(), element.DisplayName, Format.Short(d.Power or 1), where), 13, {
 		Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0, 18), TextColor3 = UI.Colors.Muted, TextWrapped = false,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
@@ -169,16 +169,17 @@ local function dragonRow(state: any, id: string, order: number)
 		end, { Size = UDim2.fromOffset(72, 40) })
 	end
 
-	-- Level and XP, with the Train toggle
+	-- Level and XP, with Train toggle
 	local level = d.Level or 1
 	local need = Leveling.XPToNext(level)
-	local xpRow = UI.new("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, Parent = card })
-	local back = UI.new("Frame", { Position = UDim2.new(0, 12, 0.5, -4), Size = UDim2.new(1, -200, 0, 8), BackgroundColor3 = UI.Colors.Panel, Parent = xpRow })
-	UI.corner(back, 4)
+	local xpRow = UI.new("Frame", { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Parent = card })
+	local back = UI.new("Frame", { Position = UDim2.new(0, 12, 0.5, -5), Size = UDim2.new(1, -200, 0, 10), BackgroundColor3 = UI.Colors.Panel, Parent = xpRow })
+	UI.corner(back, 5)
+	UI.stroke(back, UI.Colors.Iron, 1)
 	local fill = UI.new("Frame", { Size = UDim2.fromScale(if need then math.clamp((d.XP or 0) / need, 0, 1) else 1, 1), BackgroundColor3 = UI.Colors.Gold, Parent = back })
-	UI.corner(fill, 4)
+	UI.corner(fill, 5)
 	UI.label(xpRow, if need then string.format("%s/%s XP", Format.Short(d.XP or 0), Format.Short(need)) else "Max level", 12, {
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -78, 0, 2), Size = UDim2.fromOffset(110, 20), TextWrapped = false,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -78, 0, 3), Size = UDim2.fromOffset(110, 20), TextWrapped = false,
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = UI.Colors.Muted,
 	})
 	if not rideMode and not assignTo then
@@ -186,7 +187,7 @@ local function dragonRow(state: any, id: string, order: number)
 			trainOpen = if trainOpen == id then nil else id
 			render()
 		end, {
-			AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(70, 24), TextSize = 13,
+			AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(70, 26), TextSize = 13,
 			BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text,
 		})
 	end
@@ -203,7 +204,7 @@ local function dragonRow(state: any, id: string, order: number)
 		end, { TextSize = 13 })
 		setFeed(feedCost ~= nil and state.Coins >= feedCost)
 		local infuseCost = Leveling.InfuseCost(d)
-		local _, setInfuse = UI.button(panel, if infuseCost then string.format("Infuse  ◆ %s\nfinish this level", Format.Short(infuseCost)) else "Max level", function()
+		local _, setInfuse = UI.button(panel, if infuseCost then string.format("Infuse  ◆ %s\nfinish level", Format.Short(infuseCost)) else "Max level", function()
 			act("Infuse", id)
 		end, { TextSize = 13, BackgroundColor3 = Color3.fromRGB(150, 120, 220) })
 		setInfuse(infuseCost ~= nil and state.Essence >= infuseCost)
@@ -215,7 +216,6 @@ local function dragonRow(state: any, id: string, order: number)
 		UI.label(card, nextText .. "  Working dragons also gain XP over time.", 12, { Size = UDim2.new(1, 0, 0, 30), TextColor3 = UI.Colors.Muted })
 	end
 
-	-- Station picker with the income each choice would give
 	if expanded == id then
 		local picker = UI.new("Frame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, Parent = card })
 		UI.new("UIGridLayout", { CellSize = UDim2.new(0.25, -6, 0, 52), CellPadding = UDim2.fromOffset(6, 0), Parent = picker })
@@ -249,25 +249,25 @@ render = function()
 	for _ in state.Dragons do
 		total += 1
 	end
-	sheet.Title.Text = if rideMode then "<b>Choose a dragon to ride</b>" elseif assignTo then "<b>Assign to the " .. assignTo .. "</b>" else "<b>Dragons</b>"
-	UI.label(body, string.format("%d dragons • Nest %d/%d • ◆ %s essence", total, state.IdleCount, state.NestCapacity, Format.Short(state.Essence)), 14, {
-		LayoutOrder = 1, TextColor3 = UI.Colors.Muted,
+	sheet.Title.Text = if rideMode then "<b>Choose a Mount</b>" elseif assignTo then "<b>Assign to " .. assignTo .. "</b>" else "<b>Dragon Roster</b>"
+	local summary = UI.card(body, { LayoutOrder = 1 })
+	UI.label(summary, string.format("<b>%d</b> dragons  •  Nest <b>%d/%d</b>  •  <font color=\"#CEAFFF\">◆ %s essence</font>", total, state.IdleCount, state.NestCapacity, Format.Short(state.Essence)), 14, {
+		Size = UDim2.new(1, 0, 0, 20), TextColor3 = UI.Colors.Text,
 	})
 	if rideMode then
 		UI.label(body, "Riding doesn't stop a dragon's station work.", 13, { LayoutOrder = 2, TextColor3 = UI.Colors.Muted })
 	elseif assignTo then
-		UI.button(body, "Show all dragons", function()
+		UI.button(body, "Show All Dragons", function()
 			assignTo = nil
 			render()
-		end, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text })
+		end, { LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text })
 	else
-		-- Auto-release and bulk release
 		local settings = UI.row(body, 36, 6)
 		settings.LayoutOrder = 2
 		UI.label(settings, "Auto-release:", 13, { Size = UDim2.fromOffset(92, 36), TextWrapped = false, TextColor3 = UI.Colors.Muted })
 		for _, rarityId in { "Common", "Uncommon", "Rare" } do
 			local on = state.AutoRelease[rarityId] == true
-			local button = UI.button(settings, rarityId .. (if on then " ON" else ""), function()
+			UI.button(settings, rarityId .. (if on then " ON" else ""), function()
 				act("SetAutoRelease", rarityId, not on)
 			end, {
 				Size = UDim2.new(0.33, -40, 0, 34),
@@ -275,7 +275,6 @@ render = function()
 				BackgroundColor3 = if on then Rarities.Info[rarityId].Color else UI.Colors.Secondary,
 				TextColor3 = if on then UI.Colors.ButtonText else UI.Colors.Text,
 			})
-			_ = button
 		end
 		local idleCommons = {}
 		for id, d in state.Dragons do
@@ -289,7 +288,7 @@ render = function()
 				if r and r.ok then
 					Hud.Toast("Released " .. r.released .. " for +" .. r.essence .. " essence", Color3.fromRGB(190, 160, 255))
 				end
-			end, { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text, TextSize = 14 })
+			end, { LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text, TextSize = 14 })
 		end
 	end
 
@@ -305,12 +304,11 @@ render = function()
 end
 
 function DragonsSheet.init(screen: ScreenGui)
-	sheet = UI.sheet(screen, "Dragons")
+	sheet = UI.sheet(screen, "Dragon Roster", 0, "Dragons")
 	sheet.OnOpen.Event:Connect(render)
 	Store.Changed:Connect(render)
 end
 
--- station: open in "assign to this station" mode (optional).
 function DragonsSheet.Open(station: string?, mode: string?)
 	assignTo = station
 	rideMode = mode == "ride"

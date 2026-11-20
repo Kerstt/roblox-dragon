@@ -15,6 +15,7 @@ local SoundConfig = require(ReplicatedStorage.Shared.SoundConfig)
 local SkillCatalog = require(ReplicatedStorage.Shared.SkillCatalog)
 local Store = require(script.Parent.Store)
 local UI = require(script.Parent.UI)
+local VikingModels = require(script.Parent.VikingModels)
 
 local SoundManager = {}
 
@@ -105,9 +106,10 @@ playNext = function()
 	end)
 end
 
-local function toggleMusic(button: TextButton)
+local function toggleMusic(label: TextLabel)
 	musicOn = not musicOn
-	button.Text = if musicOn then "Music: on" else "Music: off"
+	label.Text = if musicOn then "<b>Music: ON</b>" else "<b>Music: OFF</b>"
+	label.TextColor3 = if musicOn then UI.Colors.Gold else UI.Colors.Muted
 	if musicOn then
 		local mood = currentMood
 		currentMood = ""
@@ -190,24 +192,66 @@ local function onCombat(kind: string, a: any, b: any)
 end
 
 function SoundManager.start()
-	-- Music on/off button, top-left under Roblox's menu buttons
+	-- Riveted forged-iron & weathered-oak Viking Horn pill button (hud.jpeg & shop.jpeg)
 	local gui = player:WaitForChild("PlayerGui"):WaitForChild("DragonTycoonUI", 10)
 	if gui then
 		local button = UI.new("TextButton", {
 			Name = "MusicToggle",
 			Position = UDim2.fromOffset(12, 60),
-			Size = UDim2.fromOffset(96, 30),
-			BackgroundColor3 = UI.Colors.Panel,
-			BackgroundTransparency = 0.2,
-			TextColor3 = UI.Colors.Text,
-			Font = UI.Font,
-			TextSize = 13,
-			Text = "Music: on",
+			Size = UDim2.fromOffset(146, 42),
+			BackgroundColor3 = UI.Colors.IronOuter,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 9,
 			Parent = gui,
 		})
-		UI.corner(button, 8)
+		UI.corner(button, 21)
+		UI.gradient(button, Color3.fromRGB(228, 232, 242), Color3.fromRGB(118, 122, 132), 90)
+		local rimStroke = UI.stroke(button, UI.Colors.WoodDark, 1.8)
+
+		local inner = UI.new("Frame", {
+			Position = UDim2.fromOffset(5, 5),
+			Size = UDim2.new(1, -10, 1, -10),
+			BackgroundColor3 = UI.Colors.Panel,
+			ZIndex = 10,
+			Parent = button,
+		})
+		UI.woodPlanks(inner, 2, 10, 16)
+		UI.stroke(inner, UI.Colors.WoodDark, 1.4)
+
+		for _, rx in { 18, 52, 94, 128 } do
+			UI.roundRivet(button, UDim2.fromOffset(rx, 3), 4, 12)
+			UI.roundRivet(button, UDim2.new(0, rx, 1, -3), 4, 12)
+		end
+
+		local hornVP = VikingModels.ViewportIcon(button, "Horn", UDim2.fromOffset(32, 32), 0, 12)
+		hornVP.AnchorPoint = Vector2.new(0, 0.5)
+		hornVP.Position = UDim2.new(0, 10, 0.5, 0)
+
+		local musicLabel = UI.label(button, "<b>Music: ON</b>", 13, {
+			Font = UI.FontDisplay,
+			Position = UDim2.fromOffset(42, 4),
+			Size = UDim2.new(1, -50, 1, -8),
+			TextXAlignment = Enum.TextXAlignment.Center,
+			TextColor3 = UI.Colors.Gold,
+			TextStrokeColor3 = UI.Colors.WoodDark,
+			TextStrokeTransparency = 0.22,
+			TextWrapped = false,
+			ZIndex = 12,
+			Parent = button,
+		})
+
+		local scale = UI.new("UIScale", { Scale = 1, Parent = button })
+		button.MouseEnter:Connect(function()
+			UI.tween(scale, 0.1, { Scale = 1.04 })
+			rimStroke.Color = UI.Colors.Stroke
+		end)
+		button.MouseLeave:Connect(function()
+			UI.tween(scale, 0.1, { Scale = 1 })
+			rimStroke.Color = UI.Colors.WoodDark
+		end)
 		button.Activated:Connect(function()
-			toggleMusic(button)
+			toggleMusic(musicLabel)
 		end)
 		-- A soft click on every button in our UI
 		local function hook(d: Instance)

@@ -32,6 +32,7 @@ local screen = UI.new("ScreenGui", {
 	ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets,
 	Parent = player:WaitForChild("PlayerGui"),
 })
+UI.attachResponsiveScale(screen, 740, 0.70)
 
 Hud.init(screen, {
 	{ Text = "Eggs", OnClick = function() EggShop.Open() end },

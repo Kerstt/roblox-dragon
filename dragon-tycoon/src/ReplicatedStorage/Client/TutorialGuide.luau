@@ -1,9 +1,7 @@
 -- ReplicatedStorage/Client/TutorialGuide
--- Shows the current tutorial step at the top of the screen and makes the
--- bottom-menu button to press pulse gold. The server decides when a step is
--- done (TutorialService) and pays the reward.
+-- Chained weathered-oak & forged-iron Saga signboard suspended beneath the top
+-- currency plaque (matching hud.jpeg) + arched golden pulse on target dock button.
 
-local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,7 +16,7 @@ local screen: ScreenGui
 local panel: Frame
 local titleLabel: TextLabel
 local textLabel: TextLabel
-local highlight: UIStroke?
+local highlightFrame: Frame?
 local highlightTween: Tween?
 local shownStep = -1
 
@@ -27,26 +25,30 @@ local function clearHighlight()
 		highlightTween:Cancel()
 		highlightTween = nil
 	end
-	if highlight then
-		highlight:Destroy()
-		highlight = nil
+	if highlightFrame then
+		highlightFrame:Destroy()
+		highlightFrame = nil
 	end
 end
 
 local function pulse(buttonName: string)
 	clearHighlight()
 	local button = screen:FindFirstChild("Menu" .. buttonName, true)
-	if not button then
+	if not button or not button:IsA("GuiObject") then
 		return
 	end
-	local stroke = Instance.new("UIStroke")
-	stroke.Name = "TutorialHighlight"
-	stroke.Color = Color3.fromRGB(255, 230, 120)
-	stroke.Thickness = 2
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = button
-	highlight = stroke
-	highlightTween = TweenService:Create(stroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Thickness = 6 })
+	local ring = UI.new("Frame", {
+		Name = "TutorialHighlight",
+		Position = UDim2.fromOffset(-2, -2),
+		Size = UDim2.new(1, 4, 1, 4),
+		BackgroundTransparency = 1,
+		ZIndex = button.ZIndex + 8,
+		Parent = button,
+	})
+	UI.new("UICorner", { CornerRadius = UDim.new(0.45, 0), Parent = ring })
+	local stroke = UI.stroke(ring, Color3.fromRGB(255, 228, 108), 2.2)
+	highlightFrame = ring
+	highlightTween = TweenService:Create(stroke, TweenInfo.new(0.65, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Thickness = 5.2 })
 	;(highlightTween :: Tween):Play()
 end
 
@@ -57,25 +59,36 @@ local function refresh()
 	end
 	local step = state.TutorialStep
 	local info = TutorialConfig.Get(step)
-	local active = step < TutorialConfig.Done and info ~= nil and not state.InBattle
-	panel.Visible = active
+	local active = state.Starter ~= "" and step < TutorialConfig.Done and info ~= nil and not state.InBattle
 	if not active then
+		panel.Visible = false
 		clearHighlight()
 		shownStep = -1
 		return
 	end
+
+	-- Yield space cleanly when a Great-Hall sheet is open (matching shop.jpeg!)
+	panel.Visible = not UI.IsAnySheetOpen()
+
 	if shownStep ~= step then
 		shownStep = step
-		titleLabel.Text = string.format("<b>%s</b>  <font color=\"#%s\">Step %d of %d%s</font>", info.Title, UI.Colors.Muted:ToHex(), step + 1,
-			#TutorialConfig.Steps, if info.Reward > 0 then string.format("  •  reward: %d coins", info.Reward) else "")
+		titleLabel.Text = string.format(
+			"<b>%s</b>  Saga %d/%d%s",
+			info.Title,
+			step + 1,
+			#TutorialConfig.Steps,
+			if info.Reward > 0 then string.format(" • +%d coins", info.Reward) else ""
+		)
 		textLabel.Text = info.Text
 		if info.Highlight then
 			pulse(info.Highlight)
 		else
 			clearHighlight()
 		end
-		panel.Position = UDim2.new(0.5, 0, 0, 40)
-		UI.tween(panel, 0.25, { Position = UDim2.new(0.5, 0, 0, 60) })
+		if panel.Visible then
+			panel.Position = UDim2.new(0.5, 0, 0, 64)
+			UI.tween(panel, 0.25, { Position = UDim2.new(0.5, 0, 0, 78) }, Enum.EasingStyle.Back)
+		end
 	end
 end
 
@@ -84,25 +97,48 @@ function TutorialGuide.init(screenGui: ScreenGui)
 	panel = UI.new("Frame", {
 		Name = "TutorialPanel",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 60),
-		Size = UDim2.new(0.92, 0, 0, 66),
-		BackgroundColor3 = UI.Colors.Panel,
-		BackgroundTransparency = 0.05,
+		Position = UDim2.new(0.5, 0, 0, 78),
+		Size = UDim2.new(0.92, 0, 0, 76),
+		BackgroundColor3 = UI.Colors.IronOuter,
 		Visible = false,
-		ZIndex = 8,
+		ZIndex = 7,
 		Parent = screen,
 	})
-	UI.new("UISizeConstraint", { MaxSize = Vector2.new(480, 66), Parent = panel })
-	UI.corner(panel, 12)
-	UI.stroke(panel, UI.Colors.Gold, 1.5)
-	titleLabel = UI.label(panel, "", 15, { Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 20), TextColor3 = UI.Colors.Gold, TextWrapped = false, ZIndex = 9 })
-	textLabel = UI.label(panel, "", 13, { Position = UDim2.fromOffset(12, 27), Size = UDim2.new(1, -24, 0, 36), ZIndex = 9 })
+	UI.new("UISizeConstraint", { MaxSize = Vector2.new(504, 78), Parent = panel })
 
+	-- Twin hanging forged-iron chains connecting up into ResourcePlaque (hud.jpeg)
+	UI.hangingChain(panel, UDim2.fromScale(0.22, 0), -18, 22, 6)
+	UI.hangingChain(panel, UDim2.fromScale(0.78, 0), -18, 22, 6)
+	UI.ironWoodPlaque(panel, 3, 8, 8, 2)
+
+	titleLabel = UI.label(panel, "", 17, {
+		Font = UI.FontDisplay,
+		Position = UDim2.fromOffset(18, 9),
+		Size = UDim2.new(1, -36, 0, 22),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextColor3 = UI.Colors.Gold,
+		TextStrokeColor3 = UI.Colors.WoodDark,
+		TextStrokeTransparency = 0.18,
+		TextWrapped = false,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		ZIndex = 10,
+	})
+	textLabel = UI.label(panel, "", 13, {
+		Position = UDim2.fromOffset(20, 32),
+		Size = UDim2.new(1, -40, 0, 34),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextColor3 = UI.Colors.Text,
+		TextStrokeColor3 = UI.Colors.WoodDark,
+		TextStrokeTransparency = 0.4,
+		ZIndex = 10,
+	})
+
+	UI.SheetChanged.Event:Connect(refresh)
 	Store.Changed:Connect(refresh)
 	Store.Notice:Connect(function(kind, payload)
 		if kind == "TutorialStep" and type(payload) == "table" then
 			if payload.Finished then
-				Hud.Toast(string.format("Tutorial complete! +%d coins. The sanctuary is yours, keeper!", (payload.Reward or 0) + (payload.Bonus or 0)), UI.Colors.Gold)
+				Hud.Toast(string.format("Saga complete! +%d coins. The sanctuary is yours, Jarl!", (payload.Reward or 0) + (payload.Bonus or 0)), UI.Colors.Gold)
 			elseif (payload.Reward or 0) > 0 then
 				Hud.Toast(string.format("Done: %s  +%d coins", tostring(payload.Title), payload.Reward), UI.Colors.Good)
 			end

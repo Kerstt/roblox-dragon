@@ -1,6 +1,5 @@
 -- ReplicatedStorage/Client/StationsSheet
--- The 4 stations: level, slots, income, element bonus, and buttons to unlock a
--- slot, upgrade, or assign a dragon. Open(station) scrolls that station to the top.
+-- Viking Sanctuary Guilds: Mine, Farm, Forge, and Watchtower.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -53,8 +52,11 @@ local function render()
 	end
 	UI.clear(sheet.Body)
 	local nextCost = state.NextSlotCost
-	UI.label(sheet.Body, string.format("Slots unlocked: %d/%d  •  next slot: %s", state.SlotsBought, #SanctuaryConfig.SlotCosts,
-		if nextCost then "◉ " .. Format.Short(nextCost) else "all unlocked"), 14, { LayoutOrder = 0, TextColor3 = UI.Colors.Muted })
+	local summary = UI.card(sheet.Body, { LayoutOrder = 0 })
+	UI.label(summary, string.format("<b>Slots Unlocked:</b> %d/%d  •  <b>Next Slot:</b> %s", state.SlotsBought, #SanctuaryConfig.SlotCosts,
+		if nextCost then "<font color=\"#" .. UI.Colors.Gold:ToHex() .. "\">◉ " .. Format.Short(nextCost) .. "</font>" else "All unlocked"), 14, {
+		Size = UDim2.new(1, 0, 0, 20), TextColor3 = UI.Colors.Text,
+	})
 
 	for i, station in SanctuaryConfig.Stations do
 		local info = state.Stations[station]
@@ -66,22 +68,32 @@ local function render()
 			end
 		end
 
-		-- Focused station first, then open stations, then locked ones.
 		local order = if station == focus then 1 elseif info.Slots > 0 then 10 + i else 20 + i
 		local card = UI.card(sheet.Body, { LayoutOrder = order })
 		if station == focus then
 			UI.stroke(card, UI.Colors.Gold, 2)
+		elseif info.Slots > 0 then
+			UI.stroke(card, UI.Colors.Stroke, 1.2)
 		end
 		UI.list(card, 6)
 		local prefers = {}
 		for _, el in Elements.StationAffinity[station] do
-			table.insert(prefers, string.format("<font color=\"#%s\">%s</font>", Elements.Info[el].Color:ToHex(), el))
+			table.insert(prefers, string.format("<font color=\"#%s\"><b>%s</b></font>", Elements.Info[el].Color:ToHex(), el))
 		end
-		UI.label(card, string.format("<b>%s</b>  Lv %d/%d", station, info.Level, SanctuaryConfig.StationMaxLevel), 18, { TextColor3 = UI.Colors.Gold })
-		UI.label(card, STATION_INFO[station], 13, { TextColor3 = UI.Colors.Muted, Size = UDim2.new(1, 0, 0, 34) })
-		UI.label(card, string.format("%s +25%%  •  Dragons %d/%d  •  <b>%s/s</b>  •  +%d%% from level",
-			table.concat(prefers, " & "), used, info.Slots, Format.Short(income), math.floor(info.Level * SanctuaryConfig.StationLevelBonus * 100 + 0.5)), 14, {
-			Size = UDim2.new(1, 0, 0, 36),
+
+		local headRow = UI.row(card, 26, 8)
+		UI.icon(headRow, "Stations", 24, if info.Slots > 0 then UI.Colors.Gold else UI.Colors.Iron, 7)
+		UI.label(headRow, string.format("<b>%s</b>  <font color=\"#%s\">Lv %d/%d</font>", station, UI.Colors.Muted:ToHex(), info.Level, SanctuaryConfig.StationMaxLevel), 18, {
+			Font = UI.FontDisplay,
+			Size = UDim2.new(1, -34, 1, 0),
+			TextColor3 = UI.Colors.Gold,
+			TextWrapped = false,
+		})
+
+		UI.label(card, STATION_INFO[station], 13, { TextColor3 = UI.Colors.Muted, Size = UDim2.new(1, 0, 0, 32) })
+		UI.label(card, string.format("%s +25%%  •  Dragons %d/%d  •  <b>%s/s</b>  •  +%d%% level",
+			table.concat(prefers, " & "), used, info.Slots, Format.Short(income), math.floor(info.Level * SanctuaryConfig.StationLevelBonus * 100 + 0.5)), 13, {
+			Size = UDim2.new(1, 0, 0, 34),
 		})
 
 		local row = UI.row(card, 44, 6)
@@ -117,11 +129,9 @@ local function render()
 end
 
 function StationsSheet.init(screen: ScreenGui)
-	sheet = UI.sheet(screen, "Stations")
+	sheet = UI.sheet(screen, "Stations", 0, "Stations")
 	sheet.OnOpen.Event:Connect(render)
 	Store.Changed:Connect(render)
-	-- Coins tick every second. Only rebuild when a button becomes (un)affordable,
-	-- so taps aren't lost to a rebuild mid-press.
 	local lastSignature = ""
 	player:GetAttributeChangedSignal("Coins"):Connect(function()
 		local state = Store.State

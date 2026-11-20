@@ -1,5 +1,8 @@
 # Local tools (rojo.exe); each person installs their own
 .tools/
+local/
+build/
+references/
 
 # Place files: the world lives on Roblox (version history in Creator Hub)
 *.rbxl

@@ -67,7 +67,7 @@ function SanctuaryService.ChooseStarter(player: Player, speciesId: string)
 	return { ok = true, dragonId = result }
 end
 
-function SanctuaryService.Hatch(player: Player, eggId: string)
+function SanctuaryService.HatchMulti(player: Player, eggId: string, count: number)
 	local data = getData(player)
 	if not data then
 		return fail("not_loaded")
@@ -80,19 +80,31 @@ function SanctuaryService.Hatch(player: Player, eggId: string)
 	if lastHatch[player] and now - lastHatch[player] < cooldown - 0.05 then
 		return fail("too_fast")
 	end
-	local ok, cost = SanctuaryLogic.CanHatch(data, eggId)
+	local ok, totalCost = SanctuaryLogic.CanHatchMulti(data, eggId, count)
 	if not ok then
-		return fail(cost)
+		return fail(totalCost)
 	end
-	if not EconomyService.TrySpendCoins(player, cost, "Egg_" .. eggId) then
+	if not EconomyService.TrySpendCoins(player, totalCost, "Egg_" .. eggId .. "x" .. tostring(count)) then
 		return fail("not_enough_coins")
 	end
 	lastHatch[player] = now
 	local lucky = (data.Boosts.LuckUntil or 0) > os.time()
-	local result = SanctuaryLogic.ApplyHatch(data, eggId, rng, lucky)
-	EggRollLog.Record(player, eggId, result, "Coins")
+	local results = table.create(count)
+	for i = 1, count do
+		local r = SanctuaryLogic.ApplyHatch(data, eggId, rng, lucky)
+		EggRollLog.Record(player, eggId, r, "Coins")
+		results[i] = r
+	end
 	changed:Fire(player, "hatch")
-	return { ok = true, result = result }
+	return { ok = true, results = results, result = results[1] }
+end
+
+function SanctuaryService.Hatch(player: Player, eggId: string)
+	local res = SanctuaryService.HatchMulti(player, eggId, 1)
+	if not res.ok then
+		return res
+	end
+	return { ok = true, result = res.result }
 end
 
 function SanctuaryService.Assign(player: Player, dragonId: string, station: string?)

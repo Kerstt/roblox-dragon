@@ -50,6 +50,8 @@ function SanctuaryLogic.ChooseStarter(data: any, speciesId: any): (boolean, stri
 	end
 	dragon.Station = station
 	data.Tutorial.Starter = speciesId
+	data.Discovered = data.Discovered or {}
+	data.Discovered[speciesId] = true
 	return true, id
 end
 
@@ -139,7 +141,10 @@ end
 
 -- Hatching ---------------------------------------------------------------------------
 
-function SanctuaryLogic.CanHatch(data: any, eggId: any): (boolean, any)
+function SanctuaryLogic.CanHatchMulti(data: any, eggId: any, count: any): (boolean, any)
+	if type(count) ~= "number" or count < 1 or count > 4 or count ~= math.floor(count) then
+		return false, "invalid"
+	end
 	local egg = EggCatalog.Get(eggId)
 	if not egg or egg.Robux then
 		return false, "invalid" -- Robux eggs are only granted by a purchase receipt
@@ -147,33 +152,51 @@ function SanctuaryLogic.CanHatch(data: any, eggId: any): (boolean, any)
 	if data.Tutorial.Starter == "" then
 		return false, "choose_starter_first"
 	end
-	-- Room needed in the nest: the rolled dragon (unless every rarity this egg
+	-- Room needed in the nest: up to `count` rolled dragons (unless every rarity this egg
 	-- can roll is set to auto-release), plus the tutorial bonus if it's due.
-	local need = 0
+	local needPerEgg = 0
 	for rarity, weight in egg.RarityWeights do
 		if weight > 0 and data.Settings.AutoRelease[rarity] ~= true then
-			need = 1
+			needPerEgg = 1
 			break
 		end
 	end
+	local need = needPerEgg * count
 	if eggId == "Hatchling" and not data.Tutorial.BonusGiven then
 		need += 1
 	end
 	if DragonService.IdleCount(data) + need > SanctuaryConfig.NestCapacityFor(data) then
 		return false, "nest_full"
 	end
-	if data.Coins < egg.Price then
+	local totalCost = egg.Price * count
+	if data.Coins < totalCost then
 		return false, "not_enough_coins"
 	end
-	return true, egg.Price
+	return true, totalCost
+end
+
+function SanctuaryLogic.CanHatch(data: any, eggId: any): (boolean, any)
+	return SanctuaryLogic.CanHatchMulti(data, eggId, 1)
 end
 
 -- Rolls and stores the result (coins already spent by the caller).
--- Returns { Id?, Species, Rarity, Released, Essence, Bonus? }.
+-- Returns { Id?, Species, Rarity, Released, Essence, IsNew, Bonus? }.
 function SanctuaryLogic.ApplyHatch(data: any, eggId: string, rng: Random, lucky: boolean?)
 	local egg = EggCatalog.Get(eggId) :: any
 	local rarity, species = EggCatalog.Roll(eggId, rng, lucky)
-	local result: any = { Egg = eggId, Species = species, Rarity = rarity, Released = false, Essence = 0, Lucky = lucky == true }
+	data.Discovered = data.Discovered or {}
+	local isNew = data.Discovered[species] ~= true
+	data.Discovered[species] = true
+
+	local result: any = {
+		Egg = eggId,
+		Species = species,
+		Rarity = rarity,
+		Released = false,
+		Essence = 0,
+		Lucky = lucky == true,
+		IsNew = isNew,
+	}
 
 	if data.Settings.AutoRelease[rarity] == true then
 		local essence = Rarities.Info[rarity].Essence
@@ -189,8 +212,10 @@ function SanctuaryLogic.ApplyHatch(data: any, eggId: string, rng: Random, lucky:
 	if eggId == "Hatchling" and not data.Tutorial.BonusGiven then
 		local starter = EggCatalog.GetStarter(data.Tutorial.Starter)
 		if starter then
+			local bonusNew = data.Discovered[starter.BonusSpecies] ~= true
+			data.Discovered[starter.BonusSpecies] = true
 			local bonusId = DragonService.Create(data, starter.BonusSpecies, EggCatalog.BonusRarity, 1, "TutorialBonus")
-			result.Bonus = { Id = bonusId, Species = starter.BonusSpecies, Rarity = EggCatalog.BonusRarity }
+			result.Bonus = { Id = bonusId, Species = starter.BonusSpecies, Rarity = EggCatalog.BonusRarity, IsNew = bonusNew }
 		end
 		data.Tutorial.BonusGiven = true
 	end

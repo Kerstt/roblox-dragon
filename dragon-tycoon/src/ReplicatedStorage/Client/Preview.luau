@@ -2,6 +2,7 @@
 -- 3D previews of dragons and eggs inside UI (ViewportFrames).
 --   Preview.Dragon(parent, speciesId, props?) -> ViewportFrame
 --   Preview.Egg(parent, eggId, props?) -> ViewportFrame
+--   Preview.SetRoll(vp, angle) / Preview.SetPose(vp, pitch, yaw, roll, lift, zoom)
 -- Previews slowly turn while visible. Particle effects don't show in
 -- viewports, so these are the bare models.
 
@@ -10,20 +11,36 @@ local RunService = game:GetService("RunService")
 
 local Preview = {}
 
-local spinning: { [ViewportFrame]: { Camera: Camera, Center: Vector3, Distance: number, Height: number, Angle: number, Speed: number } } = {}
+type ViewState = {
+	Camera: Camera,
+	Center: Vector3,
+	Distance: number,
+	Height: number,
+	Angle: number,
+	Speed: number,
+	Zoom: number,
+}
+
+local states: { [ViewportFrame]: ViewState } = {}
 
 local function setupViewport(parent: Instance, props: { [string]: any }?): ViewportFrame
 	local vp = Instance.new("ViewportFrame")
 	vp.Size = UDim2.fromScale(1, 1)
 	vp.BackgroundTransparency = 1
-	vp.Ambient = Color3.fromRGB(150, 140, 130)
-	vp.LightColor = Color3.fromRGB(255, 245, 230)
-	vp.LightDirection = Vector3.new(-0.6, -1, -0.4)
+	vp.Ambient = Color3.fromRGB(210, 200, 196)
+	vp.LightColor = Color3.fromRGB(255, 244, 218)
+	vp.LightDirection = Vector3.new(-0.55, -0.8, -0.6)
 	for key, value in props or {} do
 		(vp :: any)[key] = value
 	end
 	vp.Parent = parent
 	return vp
+end
+
+local function updateCamera(state: ViewState)
+	local dist = state.Distance * state.Zoom
+	local offset = Vector3.new(math.sin(state.Angle), 0, math.cos(state.Angle)) * dist + Vector3.new(0, state.Height * state.Zoom, 0)
+	state.Camera.CFrame = CFrame.lookAt(state.Center + offset, state.Center)
 end
 
 local function frame(vp: ViewportFrame, model: Model, look: Vector3, spin: number, closeness: number)
@@ -36,18 +53,20 @@ local function frame(vp: ViewportFrame, model: Model, look: Vector3, spin: numbe
 	local radius = size.Magnitude / 2
 	local distance = radius / math.tan(math.rad(camera.FieldOfView / 2)) * closeness
 	local angle = math.atan2(look.X, look.Z) + math.rad(35)
-	local state = { Camera = camera, Center = cf.Position, Distance = distance, Height = distance * 0.25, Angle = angle, Speed = spin }
-	local function place()
-		local offset = Vector3.new(math.sin(state.Angle), 0, math.cos(state.Angle)) * state.Distance + Vector3.new(0, state.Height, 0)
-		camera.CFrame = CFrame.lookAt(state.Center + offset, state.Center)
-	end
-	place()
-	if spin ~= 0 then
-		spinning[vp] = state
-		vp.Destroying:Connect(function()
-			spinning[vp] = nil
-		end)
-	end
+	local state: ViewState = {
+		Camera = camera,
+		Center = cf.Position,
+		Distance = distance,
+		Height = distance * 0.25,
+		Angle = angle,
+		Speed = spin,
+		Zoom = 1,
+	}
+	updateCamera(state)
+	states[vp] = state
+	vp.Destroying:Connect(function()
+		states[vp] = nil
+	end)
 end
 
 local function strip(model: Model)
@@ -86,9 +105,8 @@ function Preview.Egg(parent: Instance, eggId: string, props: { [string]: any }?,
 	return vp
 end
 
--- Tilts an egg preview (for the hatch wobble). angle in radians.
-function Preview.SetRoll(vp: ViewportFrame, angle: number)
-	local state = spinning[vp]
+-- Drives 3D wobble, hop, and camera zoom pulse during egg hatching.
+function Preview.SetPose(vp: ViewportFrame, pitch: number, yaw: number, roll: number, lift: number?, zoom: number?)
 	local model = vp:FindFirstChildWhichIsA("Model")
 	if model and model.PrimaryPart then
 		local base = model:GetAttribute("BasePivot") :: CFrame?
@@ -96,17 +114,25 @@ function Preview.SetRoll(vp: ViewportFrame, angle: number)
 			base = model:GetPivot()
 			model:SetAttribute("BasePivot", base)
 		end
-		model:PivotTo((base :: CFrame) * CFrame.Angles(0, 0, angle))
+		model:PivotTo((base :: CFrame) * CFrame.new(0, lift or 0, 0) * CFrame.Angles(pitch, yaw, roll))
 	end
-	_ = state
+	local state = states[vp]
+	if state and zoom then
+		state.Zoom = zoom
+		updateCamera(state)
+	end
+end
+
+-- Tilts an egg preview (for backwards compatibility). angle in radians.
+function Preview.SetRoll(vp: ViewportFrame, angle: number)
+	Preview.SetPose(vp, 0, 0, angle, 0)
 end
 
 RunService.RenderStepped:Connect(function(dt)
-	for vp, state in spinning do
-		if vp.Visible and vp.Parent then
+	for vp, state in states do
+		if state.Speed ~= 0 and vp.Visible and vp.Parent then
 			state.Angle += state.Speed * dt
-			local offset = Vector3.new(math.sin(state.Angle), 0, math.cos(state.Angle)) * state.Distance + Vector3.new(0, state.Height, 0)
-			state.Camera.CFrame = CFrame.lookAt(state.Center + offset, state.Center)
+			updateCamera(state)
 		end
 	end
 end)

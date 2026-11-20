@@ -1,6 +1,6 @@
 -- ReplicatedStorage/Client/BattleSheet
--- The Battle menu: your record, pick a dragon, then Casual, Ranked, Practice
--- or the co-op Raid against today's Elder dragon.
+-- Viking War Table: trophy record, fighter selection, Casual, Ranked, Practice,
+-- and the co-op Raid against today's Elder dragon.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
@@ -23,12 +23,12 @@ local selected: string? = nil
 local busy = false
 
 local MODES = {
-	{ Id = "Casual", Title = "Casual", Button = "Find a match",
-		Text = "Fight real players whose dragons are about as strong as yours. Win XP and dragon scales." },
-	{ Id = "Ranked", Title = "Ranked", Button = "Find a ranked match",
-		Text = "Every dragon fights at level 30 with all 4 skills and no rarity bonus, so skill decides. Win trophies." },
-	{ Id = "Practice", Title = "Practice", Button = "Start practice",
-		Text = "Spar with an AI dragon at your dragon's level. A little XP, up to " .. Leveling.PracticeRewardsPerDay .. " times a day." },
+	{ Id = "Casual", Title = "Casual Skirmish", Button = "Find a Match",
+		Text = "Fight real players whose dragons match your strength. Win XP and dragon scales." },
+	{ Id = "Ranked", Title = "Ranked Holmgang", Button = "Find Ranked Match",
+		Text = "Every dragon fights at level 30 with all 4 skills and no rarity bonus—pure skill decides. Win trophies." },
+	{ Id = "Practice", Title = "Sparring Ring", Button = "Start Practice",
+		Text = "Spar with an AI dragon at your level. Earn XP up to " .. Leveling.PracticeRewardsPerDay .. " times a day." },
 }
 
 local function sortedIds(state: any): { string }
@@ -81,7 +81,9 @@ local function dragonRow(state: any, id: string, order: number)
 	end
 	UI.list(card, 4)
 	local top = UI.row(card, 40)
-	local info = UI.new("Frame", { Size = UDim2.new(1, -96, 1, 0), BackgroundTransparency = 1, Parent = top })
+	local bar = UI.new("Frame", { Size = UDim2.fromOffset(5, 36), BackgroundColor3 = rarity.Color, Parent = top })
+	UI.corner(bar, 2)
+	local info = UI.new("Frame", { Size = UDim2.new(1, -108, 1, 0), BackgroundTransparency = 1, Parent = top })
 	local unlocked = Leveling.SkillsUnlocked(d.Level or 1)
 	UI.label(info, string.format("<b>%s</b>  Lv %d  <font color=\"#%s\">%s</font>", species.Name, d.Level or 1, rarity.Color:ToHex(), d.Rarity), 15, {
 		Size = UDim2.new(1, 0, 0, 20), TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
@@ -124,8 +126,16 @@ render = function()
 	local c = state.Combat
 
 	local stats = UI.card(body, { LayoutOrder = 1 })
-	UI.list(stats, 2)
-	UI.label(stats, string.format("<b>%d trophies</b>  <font color=\"#%s\">(best %d)</font>", c.Trophies, UI.Colors.Muted:ToHex(), c.BestTrophies), 18, { TextColor3 = UI.Colors.Gold })
+	UI.stroke(stats, UI.Colors.Stroke, 1.5)
+	UI.list(stats, 4)
+	local head = UI.row(stats, 26, 8)
+	UI.icon(head, "Battle", 24, UI.Colors.Gold, 7)
+	UI.label(head, string.format("<b>%d Trophies</b>  <font color=\"#%s\">(Best %d)</font>", c.Trophies, UI.Colors.Muted:ToHex(), c.BestTrophies), 18, {
+		Font = UI.FontDisplay,
+		Size = UDim2.new(1, -34, 1, 0),
+		TextColor3 = UI.Colors.Gold,
+		TextWrapped = false,
+	})
 	UI.label(stats, string.format("Wins %d • Losses %d • Ranked %d-%d • %d dragon scales", c.Wins, c.Losses, c.RankedWins, c.RankedLosses, c.Scales), 13, { TextColor3 = UI.Colors.Muted })
 	UI.label(stats, string.format("Practice XP left today: %d/%d • Raid rewards left: %d/%d • %d relic shards",
 		c.PracticeLeft, Leveling.PracticeRewardsPerDay, c.RaidLeft or 0, Leveling.RaidRewardsPerDay, c.Relics or 0), 13, { TextColor3 = UI.Colors.Muted })
@@ -133,41 +143,49 @@ render = function()
 	-- Modes
 	if state.Queue then
 		local waiting = UI.card(body, { LayoutOrder = 2, BackgroundColor3 = UI.Colors.Panel3 })
+		UI.stroke(waiting, UI.Colors.Gold, 1.5)
 		UI.list(waiting, 6)
-		UI.label(waiting, "Looking for a <b>" .. state.Queue .. "</b> opponent...", 15)
-		UI.button(waiting, "Cancel", function()
+		UI.label(waiting, "Looking for a <b>" .. state.Queue .. "</b> opponent...", 15, { TextColor3 = UI.Colors.Gold })
+		UI.button(waiting, "Cancel Queue", function()
 			Store.Request("QueueLeave")
-		end, { Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text })
+		end, { Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text })
 	else
 		for i, mode in MODES do
 			local card = UI.card(body, { LayoutOrder = 1 + i })
+			UI.stroke(card, UI.Colors.Stroke, 1)
 			UI.list(card, 4)
-			UI.label(card, "<b>" .. mode.Title .. "</b>", 16, { TextColor3 = UI.Colors.Gold })
+			UI.label(card, "<b>" .. mode.Title .. "</b>", 16, { Font = UI.FontDisplay, TextColor3 = UI.Colors.Gold })
 			UI.label(card, mode.Text, 13, { Size = UDim2.new(1, 0, 0, 34), TextColor3 = UI.Colors.Muted })
 			local _, setEnabled = UI.button(card, mode.Button, function()
 				join(mode.Id)
-			end, { Size = UDim2.new(1, 0, 0, 40) })
+			end, { Size = UDim2.new(1, 0, 0, 42) })
 			setEnabled(selected ~= nil and not state.InBattle)
 		end
-		-- Co-op raid against today's Elder
+
 		local boss = RaidConfig.Today()
 		local bossSpecies = DragonCatalog.Get(boss.Species) :: any
 		local bossElement = Elements.Info[bossSpecies.Element]
-		local raidCard = UI.card(body, { LayoutOrder = 5, BackgroundColor3 = Color3.fromRGB(48, 36, 44) })
-		UI.stroke(raidCard, Color3.fromRGB(190, 160, 255), 1.5)
+		local raidCard = UI.card(body, { LayoutOrder = 5, BackgroundColor3 = Color3.fromRGB(44, 32, 48) })
+		UI.stroke(raidCard, Color3.fromRGB(190, 160, 255), 1.8)
 		UI.list(raidCard, 4)
-		UI.label(raidCard, string.format("<b>Co-op Raid: %s</b>  <font color=\"#%s\">%s</font>", boss.Name, bossElement.Color:ToHex(), bossElement.DisplayName), 16, {
-			TextColor3 = Color3.fromRGB(210, 190, 255),
+		local rHead = UI.row(raidCard, 26, 8)
+		UI.icon(rHead, "Raid", 24, Color3.fromRGB(190, 160, 255), 7)
+		UI.label(rHead, string.format("<b>Co-op Raid: %s</b>  <font color=\"#%s\">%s</font>", boss.Name, bossElement.Color:ToHex(), bossElement.DisplayName), 16, {
+			Font = UI.FontDisplay,
+			Size = UDim2.new(1, -34, 1, 0),
+			TextColor3 = Color3.fromRGB(220, 198, 255),
+			TextWrapped = false,
 		})
-		UI.label(raidCard, string.format("Team up with up to %d players against a giant Elder dragon. Fly out of the red zones and dodge its orbs! Bring a dragon strong against %s. Wins give XP, scales and relic shards. A new Elder every day.",
-			RaidConfig.MaxParty, bossElement.DisplayName), 13, { Size = UDim2.new(1, 0, 0, 50), TextColor3 = UI.Colors.Muted })
-		local _, setRaid = UI.button(raidCard, "Join the raid", function()
+		UI.label(raidCard, string.format("Team up with up to %d players against a giant Elder dragon. Dodge red telegraph zones and bring a dragon strong against %s!",
+			RaidConfig.MaxParty, bossElement.DisplayName), 13, { Size = UDim2.new(1, 0, 0, 48), TextColor3 = UI.Colors.Muted })
+		local _, setRaid = UI.button(raidCard, "Join the Raid", function()
 			join("Raid")
-		end, { Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(170, 140, 240) })
+		end, { Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = Color3.fromRGB(170, 140, 240) })
 		setRaid(selected ~= nil and not state.InBattle)
 	end
 
-	UI.label(body, "<b>Your fighter</b>", 16, { LayoutOrder = 10, TextColor3 = UI.Colors.Gold })
+	UI.runeDivider(body, 9, UI.Colors.Stroke, 7)
+	UI.label(body, "<b>Your Champion</b>", 16, { Font = UI.FontDisplay, LayoutOrder = 10, TextColor3 = UI.Colors.Gold })
 	local ids = sortedIds(state)
 	if selected and not state.Dragons[selected] then
 		selected = nil
@@ -185,7 +203,7 @@ render = function()
 end
 
 function BattleSheet.init(screen: ScreenGui)
-	sheet = UI.sheet(screen, "Battle")
+	sheet = UI.sheet(screen, "Battle Hall", 0, "Battle")
 	sheet.OnOpen.Event:Connect(render)
 	Store.Changed:Connect(render)
 end

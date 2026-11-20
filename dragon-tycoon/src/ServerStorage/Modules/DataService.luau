@@ -49,6 +49,7 @@ local function defaultData()
 		Essence = 0, -- from releasing dragons; spent on Infuse (dragon XP)
 		-- [dragonId: string] = { Species, Rarity, Level, XP, Power, Egg, Station?, Hatched }
 		Dragons = {},
+		Discovered = {}, -- [speciesId: string] = true once obtained at least once
 		NextDragonId = 1,
 		Sanctuary = {
 			SlotsBought = 0,
@@ -139,6 +140,18 @@ local function migrate(record: any): any
 		end
 	end
 	reconcile(data, defaultData())
+	if type(data.Discovered) == "table" then
+		if type(data.Tutorial) == "table" and type(data.Tutorial.Starter) == "string" and data.Tutorial.Starter ~= "" then
+			data.Discovered[data.Tutorial.Starter] = true
+		end
+		if type(data.Dragons) == "table" then
+			for _, d in data.Dragons do
+				if type(d) == "table" and type(d.Species) == "string" then
+					data.Discovered[d.Species] = true
+				end
+			end
+		end
+	end
 	return data
 end
 DataService._migrate = migrate

@@ -570,16 +570,15 @@ function CombatClient.init(screenGui: ScreenGui)
 	})
 
 	queuePill = UI.new("Frame", {
-		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -82), Size = UDim2.new(0.9, 0, 0, 44),
-		BackgroundColor3 = UI.Colors.Panel, BackgroundTransparency = 0.05, Visible = false, Parent = screen,
+		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -134), Size = UDim2.new(0.9, 0, 0, 48),
+		BackgroundColor3 = UI.Colors.IronOuter, Visible = false, ZIndex = 9, Parent = screen,
 	})
-	UI.new("UISizeConstraint", { MaxSize = Vector2.new(420, 44), Parent = queuePill })
-	UI.corner(queuePill, 22)
-	UI.stroke(queuePill, UI.Colors.Gold, 1.5)
-	queueLabel = UI.label(queuePill, "", 14, { Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -110, 1, 0), TextWrapped = false })
+	UI.new("UISizeConstraint", { MaxSize = Vector2.new(440, 48), Parent = queuePill })
+	UI.ironWoodPlaque(queuePill, 2, 8, 6, 0)
+	queueLabel = UI.label(queuePill, "", 14, { Position = UDim2.fromOffset(18, 0), Size = UDim2.new(1, -118, 1, 0), TextWrapped = false, ZIndex = 12 })
 	UI.button(queuePill, "Cancel", function()
 		remote.Parent:WaitForChild("Request"):InvokeServer("QueueLeave")
-	end, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(84, 34), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text, TextSize = 14 })
+	end, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(86, 32), BackgroundColor3 = UI.Colors.Secondary, TextColor3 = UI.Colors.Text, TextSize = 13, ZIndex = 12 })
 
 	remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Combat") :: RemoteEvent
 	remote.OnClientEvent:Connect(onEvent)

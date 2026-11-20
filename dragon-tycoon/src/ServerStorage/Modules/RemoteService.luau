@@ -154,6 +154,12 @@ local ACTIONS: { [string]: (Player, ...any) -> any } = {
 		end
 		return SanctuaryService.Hatch(player, eggId)
 	end,
+	HatchMulti = function(player, eggId, count)
+		if not isShortString(eggId) or type(count) ~= "number" or count < 1 or count > 4 or count ~= math.floor(count) then
+			return fail("invalid")
+		end
+		return SanctuaryService.HatchMulti(player, eggId, count)
+	end,
 	Assign = function(player, dragonId, station)
 		if not isShortString(dragonId) then
 			return fail("invalid")

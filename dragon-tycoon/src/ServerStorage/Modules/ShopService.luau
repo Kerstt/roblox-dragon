@@ -76,9 +76,12 @@ local function eggGrant(eggId: string)
 			warn("[ShopService] Restricted player bought a Robux egg (prompt bypassed?)", player.UserId, eggId)
 		end
 		local rarity, species = EggCatalog.Roll(eggId, rng)
+		data.Discovered = data.Discovered or {}
+		local isNew = data.Discovered[species] ~= true
+		data.Discovered[species] = true
 		local id = DragonService.Create(data, species, rarity, bestPower(data), eggId)
 		data.Stats.Hatches += 1
-		local result = { Egg = eggId, Id = id, Species = species, Rarity = rarity, Released = false, Essence = 0 }
+		local result = { Egg = eggId, Id = id, Species = species, Rarity = rarity, Released = false, Essence = 0, IsNew = isNew }
 		EggRollLog.Record(player, eggId, result, "Robux")
 		later(player, "RobuxHatch", result)
 		return true
@@ -99,10 +102,13 @@ local GRANTS: { [string]: (Player, any, any) -> boolean } = {
 		if not DragonCatalog.Get(species) then
 			species = if DragonCatalog.Get(data.Tutorial.Starter) then data.Tutorial.Starter else "Cindermaw"
 		end
+		data.Discovered = data.Discovered or {}
+		local isNew = data.Discovered[species] ~= true
+		data.Discovered[species] = true
 		local rarity = ProductCatalog.Products.FixedDragon.Rarity
 		local id = DragonService.Create(data, species, rarity, bestPower(data), "Shop")
 		data.Purchases.Pending.FixedDragon = ""
-		later(player, "RobuxHatch", { Egg = "Shop", Id = id, Species = species, Rarity = rarity, Released = false, Essence = 0 })
+		later(player, "RobuxHatch", { Egg = "Shop", Id = id, Species = species, Rarity = rarity, Released = false, Essence = 0, IsNew = isNew })
 		return true
 	end,
 	Cosmetic = function(player, data, _receipt)

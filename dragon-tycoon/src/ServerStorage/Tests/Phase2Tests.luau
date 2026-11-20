@@ -231,6 +231,29 @@ function Phase2Tests.run(modules: Instance?, shared: Instance?): string
 		check("quick rejoin earns nothing", Logic.OfflineEarnings(data, now) == 0)
 	end
 
+	-- 4-Egg Multi-Hatch & Discovery ("NEW!") tracking -----------------------------------
+	do
+		local data = fresh()
+		Logic.ChooseStarter(data, "Cindermaw")
+		check("starter marked discovered", data.Discovered.Cindermaw == true)
+		check("invalid multi count 0 refused", select(2, Logic.CanHatchMulti(data, "Hatchling", 0)) == "invalid")
+		check("invalid multi count 5 refused", select(2, Logic.CanHatchMulti(data, "Hatchling", 5)) == "invalid")
+		data.Coins = 399
+		check("4x Hatchling needs 400 coins", select(2, Logic.CanHatchMulti(data, "Hatchling", 4)) == "not_enough_coins")
+		data.Coins = 400
+		local ok, totalCost = Logic.CanHatchMulti(data, "Hatchling", 4)
+		check("4x Hatchling costs 400", ok and totalCost == 400, totalCost)
+		local rng = Random.new(42)
+		local seen = { Cindermaw = true }
+		for i = 1, 4 do
+			local r = Logic.ApplyHatch(data, "Hatchling", rng)
+			local expectedNew = not seen[r.Species]
+			seen[r.Species] = true
+			check("multi roll " .. i .. " IsNew accurate", r.IsNew == expectedNew)
+		end
+		check("4x multi hatch count = 4", data.Stats.Hatches == 4)
+	end
+
 	table.insert(lines, 1, string.format("Phase 2 tests: %d passed, %d failed", passed, failed))
 	return table.concat(lines, "\n")
 end

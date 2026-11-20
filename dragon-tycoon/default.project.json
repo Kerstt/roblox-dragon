@@ -3,19 +3,40 @@
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
-      "Shared": { "$path": "src/ReplicatedStorage/Shared" },
-      "Client": { "$path": "src/ReplicatedStorage/Client" }
+      "$ignoreUnknownInstances": true,
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared",
+        "$ignoreUnknownInstances": true
+      },
+      "Client": {
+        "$path": "src/ReplicatedStorage/Client",
+        "$ignoreUnknownInstances": true
+      }
     },
     "ServerScriptService": {
+      "$ignoreUnknownInstances": true,
       "Main": { "$path": "src/ServerScriptService/Main.server.luau" }
     },
     "ServerStorage": {
-      "Modules": { "$path": "src/ServerStorage/Modules" },
-      "Tests": { "$path": "src/ServerStorage/Tests" },
-      "Tools": { "$path": "src/ServerStorage/Tools" }
+      "$ignoreUnknownInstances": true,
+      "Modules": {
+        "$path": "src/ServerStorage/Modules",
+        "$ignoreUnknownInstances": true
+      },
+      "Tests": {
+        "$path": "src/ServerStorage/Tests",
+        "$ignoreUnknownInstances": true
+      },
+      "Tools": {
+        "$path": "src/ServerStorage/Tools",
+        "$ignoreUnknownInstances": true
+      }
     },
     "StarterPlayer": {
+      "$ignoreUnknownInstances": true,
       "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$ignoreUnknownInstances": true,
         "ClientMain": { "$path": "src/StarterPlayer/StarterPlayerScripts/ClientMain.client.luau" }
       }
     }
