@@ -1,0 +1,5 @@
+# Windows batch files need CRLF; everything else is stored with LF.
+* text=auto
+*.cmd text eol=crlf
+*.luau text eol=lf
+*.py text eol=lf

@@ -1,0 +1,15 @@
+# Local tools (rojo.exe); each person installs their own
+.tools/
+
+# Place files: the world lives on Roblox (version history in Creator Hub)
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Editor / OS clutter
+.vscode/
+sourcemap.json
+__pycache__/
+.DS_Store
+Thumbs.db
